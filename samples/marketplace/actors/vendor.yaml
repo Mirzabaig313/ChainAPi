@@ -1,0 +1,29 @@
+name: vendor
+description: Marketplace vendor with email/password auth
+
+auth:
+  strategy: simple
+  method: POST
+  path: /api/v1/auth/vendor/login
+  body:
+    email: "{{env.vendor_email}}"
+    password: "{{env.vendor_password}}"
+  expect_status: 200
+  extract:
+    token: $.data.accessToken
+    refresh_token: $.data.refreshToken
+    vendor_id: $.data.user.id
+
+session:
+  ttl: 15m
+  refresh:
+    method: POST
+    path: /api/v1/auth/refresh
+    body:
+      refresh_token: "{{vendor.refresh_token}}"
+    extract:
+      token: $.data.accessToken
+
+inject:
+  headers:
+    Authorization: "Bearer {{vendor.token}}"

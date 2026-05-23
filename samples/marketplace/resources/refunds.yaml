@@ -1,0 +1,18 @@
+name: refund
+
+operations:
+  request:
+    method: POST
+    path: /api/v1/orders/{{order.order_id}}/refunds
+    actor: customer
+    depends_on: [order.pay]
+    body:
+      reason: "Item not as described"
+    extract:
+      refund_id: $.data.id
+
+  approve:
+    method: POST
+    path: /api/v1/admin/refunds/{{refund.refund_id}}/approve
+    actor: admin
+    depends_on: [refund.request]

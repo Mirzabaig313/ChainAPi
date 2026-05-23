@@ -1,0 +1,9 @@
+name: local
+variables:
+  baseUrl: http://localhost:3000
+  admin_email: admin@marketplace.test
+  admin_password: !secret ADMIN_PASSWORD
+  vendor_email: vendor@marketplace.test
+  vendor_password: !secret VENDOR_PASSWORD
+  customer_email: customer@marketplace.test
+  test_phone: "+15555550100"

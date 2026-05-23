@@ -1,0 +1,51 @@
+# Build artefacts
+build/
+build-*/
+out/
+cmake-build-*/
+
+# IDE / editor
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+compile_commands.json
+install_manifest.txt
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-root
+
+# Conan
+.conan/
+conan.lock
+
+# Qt
+*.user
+*.user.*
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+
+# Clang tooling
+.cache/
+.clangd/
+
+# Coverage
+*.gcno
+*.gcda
+*.profraw
+*.profdata
+coverage/
+
+# Logs
+*.log

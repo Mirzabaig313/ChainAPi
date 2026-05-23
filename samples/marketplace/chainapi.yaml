@@ -1,0 +1,13 @@
+# Sample MarketplaceAPI project — illustrative example referenced by
+# PRD §1 and §5. Bundled as the "Try Sample Project" first-run experience
+# (PRD §12). The schema here matches PRD §5.x; it will be expanded to the
+# 30-endpoint sample described in PRD Appendix A during Phase 0.
+version: 1
+name: MarketplaceAPI
+description: B2C marketplace backend (sample)
+default_environment: local
+
+imports:
+  - environments/*.yaml
+  - actors/*.yaml
+  - resources/*.yaml

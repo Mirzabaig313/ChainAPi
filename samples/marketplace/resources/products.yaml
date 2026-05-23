@@ -1,0 +1,21 @@
+name: product
+description: Vendor-listed products
+
+operations:
+  create:
+    method: POST
+    path: /api/v1/vendors/{{vendor.vendor_id}}/products
+    actor: vendor
+    body:
+      name: "Demo Product"
+      price: 999
+      stock: 50
+    expect_status: 201
+    extract:
+      product_id: $.data.id
+
+  publish:
+    method: POST
+    path: /api/v1/products/{{product.product_id}}/publish
+    actor: vendor
+    depends_on: [product.create]

@@ -1,0 +1,24 @@
+name: order
+
+operations:
+  create:
+    method: POST
+    path: /api/v1/orders
+    actor: customer
+    depends_on: [product.publish]
+    body:
+      product_id: "{{product.product_id}}"
+      quantity: 1
+    extract:
+      order_id: $.data.id
+
+  pay:
+    method: POST
+    path: /api/v1/orders/{{order.order_id}}/pay
+    actor: customer
+    depends_on: [order.create]
+    body:
+      method: card
+      token: tok_test_visa
+    extract:
+      payment_id: $.data.payment.id

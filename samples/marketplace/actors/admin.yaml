@@ -1,0 +1,21 @@
+name: admin
+description: Marketplace admin (email + password)
+
+auth:
+  strategy: simple
+  method: POST
+  path: /api/v1/auth/admin/login
+  body:
+    email: "{{env.admin_email}}"
+    password: "{{env.admin_password}}"
+  expect_status: 200
+  extract:
+    token: $.data.accessToken
+    admin_id: $.data.user.id
+
+session:
+  ttl: 15m
+
+inject:
+  headers:
+    Authorization: "Bearer {{admin.token}}"

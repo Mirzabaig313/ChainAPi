@@ -1,0 +1,38 @@
+{
+  "name": "chainapi",
+  "version": "0.1.0",
+  "description": "Workflow-aware API testing tool with auto-resolved dependency chains",
+  "homepage": "https://github.com/chainapi/chainapi",
+  "dependencies": [
+    {
+      "name": "qtbase",
+      "default-features": false,
+      "features": ["concurrent", "network", "sql"]
+    },
+    "yaml-cpp",
+    "curl",
+    "sqlite3",
+    "nlohmann-json",
+    "qtkeychain",
+    {
+      "name": "gtest",
+      "version>=": "1.14.0"
+    }
+  ],
+  "features": {
+    "desktop": {
+      "description": "Build the Qt desktop UI",
+      "dependencies": [
+        {
+          "name": "qtbase",
+          "default-features": false,
+          "features": ["gui", "widgets"]
+        },
+        {
+          "name": "qtdeclarative",
+          "default-features": false
+        }
+      ]
+    }
+  }
+}

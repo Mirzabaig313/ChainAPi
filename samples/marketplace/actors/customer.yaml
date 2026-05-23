@@ -1,0 +1,30 @@
+name: customer
+description: Mobile app user (OTP-based auth)
+
+auth:
+  strategy: chain
+  steps:
+    - id: send_otp
+      method: POST
+      path: /api/v1/auth/send-otp
+      body:
+        phone: "{{env.test_phone}}"
+      expect_status: 200
+
+    - id: verify_otp
+      method: POST
+      path: /api/v1/auth/verify-otp
+      body:
+        phone: "{{env.test_phone}}"
+        otp: "123456"
+      expect_status: 200
+      extract:
+        token: $.data.accessToken
+        customer_id: $.data.user.id
+
+session:
+  ttl: 30m
+
+inject:
+  headers:
+    Authorization: "Bearer {{customer.token}}"
