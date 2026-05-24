@@ -40,7 +40,7 @@ If you need to expose engine state to the desktop UI, do it via `engine/include/
 ## Build & Test Commands
 
 ```bash
-# Configure & build (macOS Debug with ASan + UBSan)
+# Configure & build (macOS Debug with ASan + UBSan; uses Homebrew Qt)
 cmake --preset macos-debug
 cmake --build --preset macos-debug
 
@@ -55,9 +55,16 @@ ctest --preset macos-debug --label-regex engine
 
 # Run the desktop app
 ./build/macos-debug/desktop/ChainAPI.app/Contents/MacOS/ChainAPI
+
+# Pre-push smoke check (configure + build + tests + boundary check)
+./tools/pre-push-check.sh
 ```
 
-Other presets: `macos-release`, `linux-debug`, `linux-release`, `windows-debug`, `windows-release`. Set `$VCPKG_ROOT` before configuring.
+Other presets: `macos-release`, `linux-debug`, `linux-release`, `windows-debug`, `windows-release`.
+
+**macOS local Qt source.** macOS presets read Qt from `/opt/homebrew/opt/qt@6`. Install once with `brew install qt@6`. Linux and Windows presets (and CI everywhere) use vcpkg-built Qt for reproducibility — see `vcpkg.json` for the platform-conditional manifest.
+
+**Pre-push hook.** Run `git config core.hooksPath tools/git-hooks` once to wire up the pre-push smoke check. Bypass with `git push --no-verify` when justified.
 
 ## Code Style
 
