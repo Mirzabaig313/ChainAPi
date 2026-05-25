@@ -69,11 +69,11 @@ For local development:
 ```bash
 # macOS / Linux
 ./tools/setup-qt.sh
-export CMAKE_PREFIX_PATH="$HOME/Qt/6.8.0/macos"   # or .../gcc_64 on Linux
+export CMAKE_PREFIX_PATH="$HOME/Qt/6.8.3/macos"   # or .../gcc_64 on Linux
 
 # Windows (cmd.exe)
 tools\setup-qt.cmd
-set CMAKE_PREFIX_PATH=C:\Qt\6.8.0\msvc2022_64
+set CMAKE_PREFIX_PATH=C:\Qt\6.8.3\msvc2022_64
 ```
 
 CI does the equivalent in `appveyor.yml` (Linux + Windows) and `azure-pipelines.yml` (macOS). Both pin `QT_VERSION` and `AQT_VERSION` near the top of the file — keep them in sync with `tools/setup-qt.sh`.
