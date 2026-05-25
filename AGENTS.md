@@ -21,9 +21,9 @@ Read [`doc/ChainAPI - Project Layout.md`](doc/ChainAPI%20-%20Project%20Layout.md
 | C++ standard | **C++23** |
 | Qt | **6.8 LTS** minimum |
 | Compiler | Apple Clang 16+, Clang 18+, GCC 14+, MSVC 19.40+ |
-| Dependency manager | **vcpkg** (manifest mode, `master` baseline) |
+| Dependency manager | **vcpkg** (manifest mode, `master` baseline) for non-Qt deps; **aqtinstall** for Qt 6.8 LTS |
 | Test framework | GoogleTest |
-| CI | GitHub Actions, three OS × Debug/Release matrix |
+| CI | AppVeyor (Linux + Windows) and Azure DevOps Pipelines (macOS). GitHub Actions is **not** used. |
 
 C++26 is not portable yet; do not use C++26-only features (reflection, contracts, `std::execution`) without feature-test gating. Use C++23 idioms (`std::expected`, `std::print`, ranges additions, `deducing this`) freely — they are stable on all supported compilers.
 
@@ -62,7 +62,21 @@ ctest --preset macos-debug --label-regex engine
 
 Other presets: `macos-release`, `linux-debug`, `linux-release`, `windows-debug`, `windows-release`.
 
-**macOS local Qt source.** macOS presets read Qt from `/opt/homebrew/opt/qt@6`. Install once with `brew install qt@6`. Linux and Windows presets (and CI everywhere) use vcpkg-built Qt for reproducibility — see `vcpkg.json` for the platform-conditional manifest.
+**Qt source.** Qt 6.8 LTS is installed out-of-band via [`aqtinstall`](https://github.com/miurahr/aqtinstall), not vcpkg. Building qtbase from source via vcpkg added 45-90 minutes per cold-cache CI run, which exceeded AppVeyor's 60-minute job cap. The pre-built Qt comes from the official Qt download mirror — same artifacts the Qt online installer uses — and is signature-checked by aqtinstall.
+
+For local development:
+
+```bash
+# macOS / Linux
+./tools/setup-qt.sh
+export CMAKE_PREFIX_PATH="$HOME/Qt/6.8.0/macos"   # or .../gcc_64 on Linux
+
+# Windows (cmd.exe)
+tools\setup-qt.cmd
+set CMAKE_PREFIX_PATH=C:\Qt\6.8.0\msvc2022_64
+```
+
+CI does the equivalent in `appveyor.yml` (Linux + Windows) and `azure-pipelines.yml` (macOS). Both pin `QT_VERSION` and `AQT_VERSION` near the top of the file — keep them in sync with `tools/setup-qt.sh`.
 
 **Pre-push hook.** Run `git config core.hooksPath tools/git-hooks` once to wire up the pre-push smoke check. Bypass with `git push --no-verify` when justified.
 
