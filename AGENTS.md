@@ -21,9 +21,9 @@ Read [`doc/ChainAPI - Project Layout.md`](doc/ChainAPI%20-%20Project%20Layout.md
 | C++ standard | **C++23** |
 | Qt | **6.8 LTS** minimum |
 | Compiler | Apple Clang 16+, Clang 18+, GCC 14+, MSVC 19.40+ |
-| Dependency manager | **vcpkg** (manifest mode, `master` baseline) |
+| Dependency manager | **vcpkg** (manifest mode, `master` baseline) for non-Qt deps; **aqtinstall** for Qt 6.8 LTS |
 | Test framework | GoogleTest |
-| CI | GitHub Actions, three OS × Debug/Release matrix |
+| CI | AppVeyor (Linux + Windows) and Azure DevOps Pipelines (macOS). GitHub Actions is **not** used. |
 
 C++26 is not portable yet; do not use C++26-only features (reflection, contracts, `std::execution`) without feature-test gating. Use C++23 idioms (`std::expected`, `std::print`, ranges additions, `deducing this`) freely — they are stable on all supported compilers.
 
@@ -62,7 +62,21 @@ ctest --preset macos-debug --label-regex engine
 
 Other presets: `macos-release`, `linux-debug`, `linux-release`, `windows-debug`, `windows-release`.
 
-**macOS local Qt source.** macOS presets read Qt from `/opt/homebrew/opt/qt@6`. Install once with `brew install qt@6`. Linux and Windows presets (and CI everywhere) use vcpkg-built Qt for reproducibility — see `vcpkg.json` for the platform-conditional manifest.
+**Qt source.** Qt 6.8 LTS is installed out-of-band via [`aqtinstall`](https://github.com/miurahr/aqtinstall), not vcpkg. Building qtbase from source via vcpkg added 45-90 minutes per cold-cache CI run, which exceeded AppVeyor's 60-minute job cap. The pre-built Qt comes from the official Qt download mirror — same artifacts the Qt online installer uses — and is signature-checked by aqtinstall.
+
+For local development:
+
+```bash
+# macOS / Linux
+./tools/setup-qt.sh
+export CMAKE_PREFIX_PATH="$HOME/Qt/6.8.3/macos"   # or .../gcc_64 on Linux
+
+# Windows (cmd.exe)
+tools\setup-qt.cmd
+set CMAKE_PREFIX_PATH=C:\Qt\6.8.3\msvc2022_64
+```
+
+CI does the equivalent in `appveyor.yml` (Linux + Windows) and `azure-pipelines.yml` (macOS). Both pin `QT_VERSION` and `AQT_VERSION` near the top of the file — keep them in sync with `tools/setup-qt.sh`.
 
 **Pre-push hook.** Run `git config core.hooksPath tools/git-hooks` once to wire up the pre-push smoke check. Bypass with `git push --no-verify` when justified.
 
@@ -81,6 +95,84 @@ Other presets: `macos-release`, `linux-debug`, `linux-release`, `windows-debug`,
 - Types: `PascalCase`. Functions and methods: `camelCase`. Constants: `kCamelCase` or `SCREAMING_SNAKE_CASE` for macros only.
 - Namespace: `chainapi::engine` for engine types, `chainapi::cli`, `chainapi::desktop` for app code.
 - CMake targets: `chainapi-<layer>` (`chainapi-engine`, `chainapi-cli`, `chainapi-desktop`). Aliases: `chainapi::engine`.
+
+## Comments & Documentation
+
+### Philosophy
+
+- **Comments explain *why*, not *what*.** The code tells you what happens; the comment tells you why that decision was made, what invariant is being upheld, or what the non-obvious constraint is.
+- **If you need a comment to explain *what* code does, the code is too clever.** Simplify the code first.
+- **No trailing comments.** Comments go above the line or block they describe.
+- **No "change log" comments** (`// Added by X on Y`, `// TODO: remove after sprint 4`). That's what git blame is for.
+
+### Required comments
+
+| Where | What | Example |
+|---|---|---|
+| Top of every `.h` and `.cpp` | One-line purpose + spec ref | `// Per-run mutable state. Engine Requirement §3.3.` |
+| `namespace` close brace | Namespace name | `}  // namespace chainapi::engine` |
+| Non-obvious algorithm | Brief rationale + complexity | `// Kahn's algorithm — O(V+E), avoids recursion for large graphs.` |
+| `NOLINT` / `NOLINTNEXTLINE` | Why the suppression is justified | `// NOLINT(cppcoreguidelines-pro-type-reinterpret-cast): required for C interop with sqlite3` |
+| Public API functions in headers | `///` doc-comment: brief, params, return, errors | See "Doxygen style" below |
+| Magic numbers or constants | What the value means | `constexpr int kMaxYamlDepth = 64;  // prevent stack overflow on malicious input` |
+| Preprocessor guards | Condition description when non-trivial | `#ifdef CHAINAPI_HAS_QTKEYCHAIN  // vcpkg provides this on Linux/Windows; macOS uses Security.framework directly` |
+
+### Forbidden comments
+
+- **Commented-out code.** Delete it; git has history. If you're keeping it as a reference for a future approach, move it to a doc or an issue.
+- **Obvious restating.** `// increment counter` above `++counter;` — adds noise, not value.
+- **End-of-line `// ...`** on the same line as code. Put the comment on the line above.
+- **Block-separator banners** in the middle of a function (`// ====== STEP 2 ======`). If a function needs section headers, it's too long — split it.
+- **Attribution / authorship.** `// Written by Mirza, May 2026` — that's git blame territory.
+- **Aspirational TODOs without an issue link.** `// TODO: fix this someday` is dead weight. Write `// TODO(#42): handle timeout retry per Engine Requirement §3.5` or don't write a TODO.
+
+### Doxygen style (public headers only)
+
+Use `///` (triple-slash) style, not `/** */` blocks. Keep it tight.
+
+```cpp
+/// Resolve the full dependency chain for a target operation.
+///
+/// Walks the resource graph (Kahn's topological sort) and returns an
+/// ordered list of operations to execute, including authentication steps.
+///
+/// @param target  The operation the user clicked / invoked.
+/// @param ctx     Current run context (session cache, extraction state).
+/// @return Ordered execution plan, or ChainApiError on cycle / missing ref.
+///
+/// @note Thread-safety: not re-entrant. Caller must serialize access.
+std::expected<ExecutionPlan, ChainApiError>
+resolve(const OperationId& target, const RunContext& ctx);
+```
+
+Rules:
+
+- First line is a single sentence summary ending with a period.
+- Blank line between summary and extended description.
+- `@param`, `@return`, `@note`, `@throws` — only when non-obvious.
+- Don't document getters/setters unless the semantic is surprising.
+- Don't document private/internal functions with Doxygen — a plain `//` one-liner above is enough.
+
+### Comments in tests
+
+- **Test name is the primary documentation.** `TEST(DependencyResolver, returns_cycle_error_when_graph_has_back_edge)` should need zero comments.
+- If the Arrange block is non-trivial, a one-line comment above it explaining the scenario is fine: `// Construct a graph with A→B→C→A`.
+- Never comment the Assert block with `// should be true` — if the assertion fails, GoogleTest prints the actual vs expected. That's the comment.
+
+### CMake comments
+
+- One-line comment above each `add_library` / `add_executable` explaining what the target is.
+- Comments above `target_link_libraries` blocks explaining *why* each dep is needed (especially for non-obvious ones like `Qt6Keychain`).
+- Never comment `#` at end of line in CMake — put it on the line above.
+
+### AI-generated code: comment hygiene
+
+When an AI agent produces code, apply these filters before accepting:
+
+- **Delete any "Here's what this does" explanatory comment that restates the code.** Models over-explain to prove they understand; the result is noisy.
+- **Keep any "This is needed because..." comment that explains a constraint.** That's genuine value.
+- **Rewrite any vague TODO** to include an issue number or a specific condition under which the TODO should be addressed.
+- **Remove any `// Added by AI` or `// Generated` markers.** They're noise and git blame already records the commit.
 
 ## Layer Rules (Clean Architecture)
 
